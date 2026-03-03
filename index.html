@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>赤穹协议 - Crimson Vault Protocol</title>
+    <title>赤穹协议 v2.0 - 深度战略版</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/game.css">
 </head>
@@ -12,22 +12,25 @@
         <!-- 游戏标题 -->
         <header class="game-header">
             <h1>赤穹协议</h1>
-            <p class="subtitle">Crimson Vault Protocol</p>
+            <p class="subtitle">Crimson Vault Protocol - 深度战略版 v2.0</p>
         </header>
 
         <!-- 游戏状态面板 -->
         <div class="status-panel" id="game-status">
-            <!-- 状态将由JS动态生成 -->
+            <!-- 状态由JS动态生成 -->
         </div>
 
         <!-- 游戏内容区域 -->
         <div class="game-content">
             <div id="story-content">
-                <!-- 故事内容将由JS动态生成 -->
+                <div class="loading">
+                    <h2>🎮 加载中...</h2>
+                    <p>南太平洋联邦的命运等待你的决策</p>
+                </div>
             </div>
             
             <div class="choices-container" id="choices-container">
-                <!-- 选择项将由JS动态生成 -->
+                <!-- 选择项由JS动态生成 -->
             </div>
         </div>
 
@@ -36,9 +39,9 @@
 
         <!-- 游戏控制按钮 -->
         <div class="game-controls">
-            <button id="new-game-btn" class="btn btn-primary">新游戏</button>
-            <button id="save-game-btn" class="btn btn-secondary">保存游戏</button>
-            <button id="load-game-btn" class="btn btn-secondary">加载游戏</button>
+            <button id="new-game-btn" class="btn btn-primary">🔄 新游戏</button>
+            <button id="save-game-btn" class="btn btn-secondary">💾 保存</button>
+            <button id="load-game-btn" class="btn btn-secondary">📂 加载</button>
         </div>
     </div>
 
