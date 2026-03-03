@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <defs>
+    <linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#87CEEB"/>
+      <stop offset="100%" stop-color="#F0E68C"/>
+    </linearGradient>
+    <linearGradient id="desert" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#D2B48C"/>
+      <stop offset="100%" stop-color="#CD853F"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Sky background -->
+  <rect width="800" height="600" fill="url(#sky)"/>
+  
+  <!-- Desert landscape -->
+  <path d="M0,400 Q200,380 400,420 T800,400 L800,600 L0,600 Z" fill="url(#desert)"/>
+  
+  <!-- Mountains in distance -->
+  <polygon points="100,300 150,250 200,300" fill="#8B4513" opacity="0.6"/>
+  <polygon points="600,280 650,230 700,280" fill="#8B4513" opacity="0.6"/>
+  
+  <!-- Military vehicles -->
+  <rect x="300" y="420" width="40" height="20" fill="#2F4F4F" rx="3"/>
+  <rect x="450" y="425" width="35" height="15" fill="#8B0000" rx="2"/>
+  
+  <!-- Drone symbols -->
+  <circle cx="350" cy="350" r="8" fill="#4169E1"/>
+  <circle cx="500" cy="330" r="8" fill="#DC143C"/>
+  
+  <!-- Resource symbols (minerals) -->
+  <circle cx="200" cy="450" r="12" fill="#FFD700"/>
+  <circle cx="600" cy="460" r="10" fill="#C0C0C0"/>
+  
+  <!-- Title text -->
+  <text x="400" y="80" font-family="Arial, sans-serif" font-size="24" font-weight="bold" 
+        text-anchor="middle" fill="#2F4F4F">非洲代理人战争</text>
+  <text x="400" y="110" font-family="Arial, sans-serif" font-size="16" 
+        text-anchor="middle" fill="#2F4F4F">矿产资源争夺战</text>
+</svg>

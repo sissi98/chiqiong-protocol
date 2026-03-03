@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>赤穹协议 - Crimson Vault Protocol</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 游戏标题 -->
+        <header class="game-header">
+            <h1>赤穹协议</h1>
+            <p class="subtitle">Crimson Vault Protocol</p>
+        </header>
+
+        <!-- 游戏状态面板 -->
+        <div class="status-panel" id="game-status">
+            <!-- 状态将由JS动态生成 -->
+        </div>
+
+        <!-- 游戏内容区域 -->
+        <div class="game-content">
+            <div id="story-content">
+                <!-- 故事内容将由JS动态生成 -->
+            </div>
+            
+            <div class="choices-container" id="choices-container">
+                <!-- 选择项将由JS动态生成 -->
+            </div>
+        </div>
+
+        <!-- 消息提示 -->
+        <div id="message-display" class="message-display" style="display:none;"></div>
+
+        <!-- 游戏控制按钮 -->
+        <div class="game-controls">
+            <button id="new-game-btn" class="btn btn-primary">新游戏</button>
+            <button id="save-game-btn" class="btn btn-secondary">保存游戏</button>
+            <button id="load-game-btn" class="btn btn-secondary">加载游戏</button>
+        </div>
+    </div>
+
+    <script src="js/game.js"></script>
+</body>
+</html>

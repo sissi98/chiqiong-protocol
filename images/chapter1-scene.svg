@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="800" height="400" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ocean" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e3c72"/>
+      <stop offset="100%" stop-color="#2a5298"/>
+    </linearGradient>
+    <linearGradient id="sky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#87CEEB"/>
+      <stop offset="100%" stop-color="#4682B4"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Sky background -->
+  <rect x="0" y="0" width="800" height="200" fill="url(#sky)"/>
+  
+  <!-- Ocean -->
+  <rect x="0" y="200" width="800" height="200" fill="url(#ocean)"/>
+  
+  <!-- Waves -->
+  <path d="M0,220 Q200,200 400,220 T800,220 L800,400 L0,400 Z" fill="#2a5298" opacity="0.3"/>
+  <path d="M0,240 Q200,220 400,240 T800,240 L800,400 L0,400 Z" fill="#2a5298" opacity="0.2"/>
+  
+  <!-- US Destroyer -->
+  <rect x="100" y="180" width="80" height="20" fill="#696969" rx="5"/>
+  <rect x="120" y="160" width="20" height="20" fill="#708090" rx="3"/>
+  
+  <!-- Chinese UAV boats -->
+  <rect x="300" y="190" width="30" height="10" fill="#dc143c" rx="2"/>
+  <rect x="350" y="185" width="30" height="10" fill="#dc143c" rx="2"/>
+  <rect x="400" y="195" width="30" height="10" fill="#dc143c" rx="2"/>
+  
+  <!-- Island in distance -->
+  <ellipse cx="650" cy="230" rx="40" ry="20" fill="#8FBC8F"/>
+  <rect x="630" y="210" width="40" height="30" fill="#228B22"/>
+  
+  <!-- Title text -->
+  <text x="400" y="50" text-anchor="middle" font-family="Arial" font-size="24" fill="white" font-weight="bold">
+    南海危机 - 第一章
+  </text>
+</svg>
