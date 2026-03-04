@@ -261,6 +261,90 @@
     color: #666;
 }
 
+/* 供应链 / 天赋 / 军备面板 */
+.supply-panel, .perks-panel, .arms-panel, .intel-panel {
+    background: rgba(0,0,0,0.2);
+    padding: 10px 15px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+
+.supply-panel h3, .perks-panel h3, .arms-panel h3, .intel-panel h3 {
+    color: #4fc3f7;
+    margin-bottom: 8px;
+    font-size: 0.9em;
+}
+
+.supply-list, .perks-list, .arms-list, .intel-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.supply-badge, .perk-badge, .arms-badge, .intel-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    background: rgba(76, 175, 80, 0.3);
+    color: #a5d6a7;
+}
+
+.supply-badge.disrupted {
+    background: rgba(244, 67, 54, 0.3);
+    color: #ef9a9a;
+}
+
+.perk-badge {
+    background: rgba(156, 39, 176, 0.3);
+    color: #ce93d8;
+}
+
+.arms-badge {
+    background: rgba(255, 152, 0, 0.3);
+    color: #ffcc80;
+}
+
+.intel-badge {
+    background: rgba(33, 150, 243, 0.3);
+    color: #90caf9;
+}
+
+/* Perk 选择界面 */
+.perks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+}
+
+.perk-btn {
+    text-align: left;
+    padding: 14px;
+}
+
+.perk-btn .perk-desc {
+    font-size: 0.85em;
+    opacity: 0.9;
+    display: block;
+    margin-top: 6px;
+}
+
+.perk-btn.selected {
+    background: linear-gradient(135deg, #7b1fa2, #9c27b0);
+    box-shadow: 0 0 15px rgba(156, 39, 176, 0.5);
+}
+
+.perk-hint {
+    color: #aaa;
+    font-size: 0.9em;
+    margin-top: 10px;
+}
+
+.perk-wait {
+    color: #888;
+    font-style: italic;
+}
+
 /* 场景容器 */
 .scene-container {
     padding: 20px;
@@ -539,6 +623,11 @@
 
 .btn-secondary {
     background: linear-gradient(135deg, #ff8f00, #ffa000);
+    color: white;
+}
+
+.btn-spy {
+    background: linear-gradient(135deg, #4a148c, #7b1fa2);
     color: white;
 }
 

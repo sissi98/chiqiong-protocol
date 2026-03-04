@@ -1,31 +1,38 @@
 /**
- * 《赤穹协议》深度战略版 v2.0
- * 多分支、多结局、随机事件的地缘政治模拟器
+ * 《赤穹协议》深度战略版 v3.0
+ * 多分支、动态剧情、地缘政治模拟、Roguelike 元素
  */
 
 class GameEngine {
     constructor() {
         // 核心游戏状态
-        this.gameState = {
-            // 基础属性
+        this.gameState = this.getInitialState();
+        this.randomEvents = this.buildRandomEvents();
+        this.chapters = { 1: { title: '第一幕：风云初起', scenes: ['south_china_sea', 'resource_discovery', 'diplomatic_choice'] }, 2: { title: '第二幕：暗流涌动', scenes: ['africa_proxy', 'tech_race', 'spy_network'] }, 3: { title: '第三幕：临界点', scenes: ['crisis_escalation', 'final_choice', 'resolution'] } };
+        this.scenes = this.buildScenes();
+        this.endings = this.buildEndings();
+        this.saveKey = 'chiqiongProtocolV3Save';
+        this.currentScene = null;
+        this.eventLog = [];
+    }
+
+    getInitialState() {
+        const seed = Date.now();
+        const map = typeof RoguelikeData !== 'undefined' ? RoguelikeData.generateWorldMap(seed, 6) : [];
+        const perksOffered = typeof RoguelikeData !== 'undefined' ? RoguelikeData.drawPerks(seed, 6) : [];
+        return {
             turn: 1,
             maxTurns: 50,
-            currentAct: 1, // 幕
-            
-            // 核心紧张度 (0-100, 到达100 = 核战争)
+            currentAct: 1,
             nuclearTension: 25,
-            
-            // 国家资源
             resources: {
-                budget: 100,        // 国家预算 (B)
-                techLevel: 25,      // 科技水平 (0-100)
-                militaryPower: 30,  // 军事力量 (0-100)
-                intelligence: 20,   // 情报能力 (0-100)
-                stability: 70,      // 国内稳定度 (0-100)
-                reputation: 50       // 国际声誉 (0-100)
+                budget: 100,
+                techLevel: 25,
+                militaryPower: 30,
+                intelligence: 20,
+                stability: 70,
+                reputation: 50
             },
-            
-            // 五大国关系 (多维)
             relations: {
                 USA: { favor: 50, trust: 50, threat: 30, trade: 40 },
                 China: { favor: 50, trust: 50, threat: 30, trade: 40 },
@@ -33,74 +40,92 @@ class GameEngine {
                 EU: { favor: 55, trust: 60, threat: 10, trade: 50 },
                 India: { favor: 45, trust: 45, threat: 20, trade: 30 }
             },
-            
-            // 秘密状态
             secrets: {
                 hasNuclearWeapon: false,
                 hasBioWeapon: false,
                 hasAISuperiority: false,
                 hasQuantumTech: false,
                 hasSpaceWeapon: false,
-                usaIntel: [],      // 美国情报
-                chinaIntel: [],    // 中国情报
-                russiaIntel: [],   // 俄罗斯情报
-                blackmailable: []  // 可勒索对象
+                usaIntel: [],
+                chinaIntel: [],
+                russiaIntel: [],
+                blackmailable: []
             },
-            
-            // 间谍网络
             spies: {
                 available: 2,
-                deployed: [] // {target: 'USA', mission: 'intel', turnsLeft: 3}
+                deployed: []
             },
-            
-            // 事件标记
             flags: {
-                // 第一章节
                 southChinaSeaCrisis: false,
                 usaBaseAccess: false,
                 chinaRareEarth: false,
                 russiaS500: false,
                 proxyCreated: false,
-                
-                // 第二章节
                 africaIntervened: false,
                 cobaltControlled: false,
                 humanitarianPraised: false,
                 doubleAgent: false,
-                
-                // 第三章节
                 aiRace: false,
                 quantumProject: false,
                 spaceProgram: false,
                 bioResearch: false,
-                
-                // 特殊事件
                 assasinationAttempt: false,
                 coupDetected: false,
                 leakScandal: false,
                 economicCrisis: false
             },
-            
-            // 历史记录
             history: [],
-            
-            // 解锁的结局
-            unlockedEndings: []
+            unlockedEndings: [],
+            runSeed: seed,
+            supplyChain: {
+                oil: { supplier: 'USA', disrupted: false, lastDisruptTurn: 0 },
+                rare_earth: { supplier: 'China', disrupted: false, lastDisruptTurn: 0 },
+                cobalt: { supplier: 'China', disrupted: false, lastDisruptTurn: 0 },
+                grain: { supplier: 'EU', disrupted: false, lastDisruptTurn: 0 },
+                chips: { supplier: 'USA', disrupted: false, lastDisruptTurn: 0 }
+            },
+            armsRace: { USA: 30, China: 25, Russia: 28, EU: 20, India: 18 },
+            worldMap: map,
+            currentRegionIndex: 0,
+            perksOffered: perksOffered,
+            perksSelected: [],
+            eventChain: { activeChainId: null, stepIndex: 0 },
+            useDynamicStory: true,
+            intelReports: [],
+            briefings: [],
+            sceneHistory: []
         };
-        
-        // 随机事件池
-        this.randomEvents = {
+    }
+
+    buildRandomEvents() {
+        const engine = this;
+        return {
             global: [
                 {
                     id: 'oil_crisis',
                     title: '🛢️ 全球石油危机',
                     weight: 5,
                     minTurn: 5,
+                    chainId: 'oil_chain',
+                    nextEventId: 'oil_chain_2',
                     condition: (gs) => gs.resources.budget > 50,
                     effect: (gs) => {
                         gs.resources.budget -= 25;
                         gs.nuclearTension += 5;
+                        if (gs.supplyChain && gs.supplyChain.oil) gs.supplyChain.oil.disrupted = true;
                         return '中东局势动荡，全球油价飙升，你的国家预算受到严重冲击。(-$25B, +5核紧张)';
+                    }
+                },
+                {
+                    id: 'oil_chain_2',
+                    title: '🛢️ 石油危机后续',
+                    weight: 0,
+                    minTurn: 5,
+                    condition: (gs) => true,
+                    effect: (gs) => {
+                        gs.resources.budget -= 15;
+                        gs.nuclearTension += 3;
+                        return '石油输出国组织达成限产协议，油价维持高位。供应链持续承压。(-$15B, +3核紧张)';
                     }
                 },
                 {
@@ -284,25 +309,11 @@ class GameEngine {
                 }
             ]
         };
-        
-        // 章节剧情
-        this.chapters = {
-            1: {
-                title: '第一幕：风云初起',
-                scenes: ['south_china_sea', 'resource_discovery', 'diplomatic_choice']
-            },
-            2: {
-                title: '第二幕：暗流涌动',
-                scenes: ['africa_proxy', 'tech_race', 'spy_network']
-            },
-            3: {
-                title: '第三幕：临界点',
-                scenes: ['crisis_escalation', 'final_choice', 'resolution']
-            }
-        };
-        
-        // 场景定义
-        this.scenes = {
+    }
+
+    buildScenes() {
+        const engine = this;
+        return {
             south_china_sea: {
                 title: '🌊 南海危机',
                 text: `五艘中国无人艇与三艘美国驱逐舰在南海争议海域对峙，双方均声称该区域内的稀土矿脉归属权。作为南太平洋联邦安全顾问，你的决策将影响地区格局。`,
@@ -743,9 +754,10 @@ class GameEngine {
                 ]
             }
         };
-        
-        // 结局定义
-        this.endings = {
+    }
+
+    buildEndings() {
+        return {
             nuclear_winter: {
                 title: '☢️ 核冬天',
                 condition: (gs) => gs.nuclearTension >= 100,
@@ -811,10 +823,6 @@ class GameEngine {
                 rarity: 'common'
             }
         };
-        
-        this.saveKey = 'chiqiongProtocolV2Save';
-        this.currentScene = null;
-        this.eventLog = [];
     }
 
     // 初始化
@@ -843,15 +851,132 @@ class GameEngine {
                 this.showMessage('没有找到存档！', 'error');
             }
         };
+        document.getElementById('spy-deploy-btn').onclick = () => this.showSpyDeploy();
+    }
+
+    showSpyDeploy() {
+        const gs = this.gameState;
+        if (!gs.spies || gs.spies.available <= 0) {
+            this.showMessage('没有可用的间谍', 'error');
+            return;
+        }
+        const targets = ['USA', 'China', 'Russia', 'EU', 'India'];
+        const storyDiv = document.getElementById('story-content');
+        storyDiv.innerHTML = `
+            <div class="scene-container">
+                <h2 class="scene-title">🕵️ 派遣间谍</h2>
+                <div class="scene-text">选择渗透目标与任务类型。任务将在数回合后结算，成功则获得情报，失败可能恶化关系。可用间谍：${gs.spies.available}</div>
+                <div class="choices-container" id="spy-choices"></div>
+            </div>
+        `;
+        const container = document.getElementById('spy-choices');
+        const missions = [{ id: 'intel', name: '情报收集' }, { id: 'sabotage', name: '破坏' }, { id: 'diplomacy', name: '外交渗透' }];
+        let html = '';
+        targets.forEach(t => {
+            missions.forEach(m => {
+                html += `<button class="choice-btn spy-option" data-target="${t}" data-mission="${m.id}">${this.countryName(t)} - ${m.name}</button>`;
+            });
+        });
+        html += '<button class="choice-btn continue-btn" onclick="game.render()">取消</button>';
+        container.innerHTML = html;
+        container.querySelectorAll('.spy-option').forEach(btn => {
+            btn.onclick = () => {
+                const target = btn.dataset.target;
+                const mission = btn.dataset.mission;
+                gs.spies.available--;
+                const turnsLeft = mission === 'sabotage' ? 3 : 2;
+                gs.spies.deployed.push({ target, mission, turnsLeft });
+
+                // 派遣时立即产生小收益，提升“有用感”
+                let instant = '';
+                if (mission === 'intel') {
+                    gs.resources.intelligence = Math.min(100, gs.resources.intelligence + 4);
+                    instant = '先遣情报已回传（情报+4）';
+                } else if (mission === 'diplomacy') {
+                    gs.relations[target].favor = Math.min(100, gs.relations[target].favor + 3);
+                    gs.relations[target].trust = Math.min(100, gs.relations[target].trust + 4);
+                    instant = `秘密接触建立（${this.countryName(target)}好感+3, 信任+4）`;
+                } else {
+                    const shock = Math.random() < 0.45;
+                    if (shock && gs.armsRace && gs.armsRace[target] != null) {
+                        gs.armsRace[target] = Math.max(0, gs.armsRace[target] - 3);
+                        instant = `前置破坏成功（${this.countryName(target)}军备-3）`;
+                    } else {
+                        instant = '潜伏已建立，等待行动窗口';
+                    }
+                }
+                this.showMessage(`已向${this.countryName(target)}派遣间谍（${mission}）｜${instant}`, 'success');
+                this.saveGame();
+                this.render();
+            };
+        });
     }
 
     // 渲染游戏界面
     render() {
         this.renderStatus();
-        if (this.checkEnding()) {
+        if (this.checkEnding()) return;
+        const gs = this.gameState;
+        if (gs.turn === 1 && gs.perksOffered && gs.perksOffered.length > 0 && (!gs.perksSelected || gs.perksSelected.length === 0)) {
+            this.renderPerkSelection();
             return;
         }
         this.renderScene();
+    }
+
+    // Perk 选择界面（开局选 2 个）
+    renderPerkSelection() {
+        const gs = this.gameState;
+        const storyDiv = document.getElementById('story-content');
+        const selected = gs._perkSelectionTemp || [];
+        const toggle = (id) => {
+            const idx = selected.indexOf(id);
+            if (idx >= 0) selected.splice(idx, 1);
+            else if (selected.length < 2) selected.push(id);
+            gs._perkSelectionTemp = selected;
+            game.render();
+        };
+        storyDiv.innerHTML = `
+            <div class="scene-container">
+                <h2 class="scene-title">🎲 本局天赋（任选 2 项）</h2>
+                <div class="scene-text">Roguelike 模式：每局随机 6 个天赋，选择 2 个影响本局进程。</div>
+                <div class="perks-grid">
+                    ${(gs.perksOffered || []).map(p => `
+                        <button class="choice-btn perk-btn ${selected.includes(p.id) ? 'selected' : ''}" data-id="${p.id}" onclick="game.togglePerk('${p.id}')">
+                            <strong>${p.name}</strong><br><span class="perk-desc">${p.desc}</span>
+                        </button>
+                    `).join('')}
+                </div>
+                <p class="perk-hint">已选 ${selected.length}/2</p>
+            </div>
+        `;
+        const choicesDiv = document.getElementById('choices-container');
+        choicesDiv.innerHTML = selected.length === 2
+            ? `<button class="choice-btn continue-btn" onclick="game.confirmPerks()">确认并开始</button>`
+            : `<span class="perk-wait">请选择 2 个天赋</span>`;
+    }
+
+    togglePerk(id) {
+        const gs = this.gameState;
+        gs._perkSelectionTemp = gs._perkSelectionTemp || [];
+        const idx = gs._perkSelectionTemp.indexOf(id);
+        if (idx >= 0) gs._perkSelectionTemp.splice(idx, 1);
+        else if (gs._perkSelectionTemp.length < 2) gs._perkSelectionTemp.push(id);
+        this.render();
+    }
+
+    confirmPerks() {
+        const gs = this.gameState;
+        const sel = gs._perkSelectionTemp || [];
+        if (sel.length !== 2) return;
+        gs.perksSelected = (gs.perksOffered || []).filter(p => sel.includes(p.id));
+        gs.perksSelected.forEach(p => {
+            if (p.effect === 'spyBonus' && p.value) gs.spies.available += p.value;
+            if (p.effect === 'intelBoost' && p.value) gs.resources.intelligence = Math.min(100, gs.resources.intelligence + p.value);
+        });
+        delete gs._perkSelectionTemp;
+        this.saveGame();
+        this.render();
     }
 
     // 渲染状态面板
@@ -968,6 +1093,34 @@ class GameEngine {
                     ${Object.values(this.gameState.secrets).flat().filter(x => typeof x === 'string').length === 0 && this.gameState.secrets.blackmailable.length === 0 ? '<span class="secret-badge empty">暂无</span>' : ''}
                 </div>
             </div>
+            ${(this.gameState.supplyChain && Object.keys(this.gameState.supplyChain).length) ? `
+            <div class="supply-panel">
+                <h3>📦 供应链</h3>
+                <div class="supply-list">
+                    ${Object.entries(this.gameState.supplyChain).map(([k, v]) => `<span class="supply-badge ${v.disrupted ? 'disrupted' : ''}" title="${v.supplier}">${k === 'oil' ? '🛢️' : k === 'rare_earth' ? '💎' : k === 'cobalt' ? '⛏️' : k === 'grain' ? '🌾' : '🔌'} ${v.disrupted ? '断供' : '正常'}</span>`).join('')}
+                </div>
+            </div>
+            ` : ''}
+            ${(this.gameState.perksSelected && this.gameState.perksSelected.length > 0) ? `
+            <div class="perks-panel">
+                <h3>⭐ 本局天赋</h3>
+                <div class="perks-list">${this.gameState.perksSelected.map(p => `<span class="perk-badge" title="${p.desc}">${p.name}</span>`).join('')}</div>
+            </div>
+            ` : ''}
+            ${(this.gameState.armsRace && this.gameState.perksSelected && this.gameState.perksSelected.some(p => p.effect === 'seeArmsLevel')) ? `
+            <div class="arms-panel">
+                <h3>🔭 军备等级</h3>
+                <div class="arms-list">${Object.entries(this.gameState.armsRace).map(([k, v]) => `<span class="arms-badge">${this.countryName(k)} ${Math.round(v)}</span>`).join('')}</div>
+            </div>
+            ` : ''}
+            <div class="intel-panel">
+                <h3>🕵️ 情报态势</h3>
+                <div class="intel-list">
+                    <span class="intel-badge">可用间谍 ${this.gameState.spies?.available || 0}</span>
+                    <span class="intel-badge">执行中 ${this.gameState.spies?.deployed?.length || 0}</span>
+                    <span class="intel-badge">战报 ${this.gameState.intelReports?.length || 0}</span>
+                </div>
+            </div>
         `;
         
         statusDiv.innerHTML = html;
@@ -977,11 +1130,17 @@ class GameEngine {
     renderScene() {
         const scene = this.getCurrentScene();
         if (!scene) return;
-        
+
         const storyDiv = document.getElementById('story-content');
         let sceneText = scene.text;
-        if (scene.dynamicText) {
-            sceneText += '\n\n' + scene.dynamicText(this.gameState);
+        if (scene.dynamicText) sceneText += '\n\n' + scene.dynamicText(this.gameState);
+        const dynamicIntro = this.getDynamicSceneIntro(this.gameState, scene);
+        if (dynamicIntro && this.gameState.turn >= 6 && this.gameState.turn <= 10) {
+            sceneText = dynamicIntro + '\n\n' + sceneText;
+        }
+        if (this.gameState.briefings && this.gameState.briefings.length > 0) {
+            const briefing = this.gameState.briefings.map(b => `• ${b}`).join('\n');
+            sceneText = `【本回合情报简报】\n${briefing}\n\n` + sceneText;
         }
         
         storyDiv.innerHTML = `
@@ -1006,41 +1165,116 @@ class GameEngine {
         });
     }
 
-    // 获取当前场景
+    pickSceneKey(candidates) {
+        const gs = this.gameState;
+        const recent = gs.sceneHistory || [];
+        let pool = candidates.filter(k => !recent.includes(k));
+        if (pool.length === 0) pool = candidates;
+        const key = pool[Math.floor(Math.random() * pool.length)];
+        gs.sceneHistory = [key, ...recent].slice(0, 3);
+        return key;
+    }
+
+    buildProceduralLateScene() {
+        const gs = this.gameState;
+        const region = (gs.worldMap && gs.worldMap.length)
+            ? gs.worldMap[gs.currentRegionIndex % gs.worldMap.length].name
+            : '全球多点战区';
+        const focuses = ['军事威慑', '外交破局', '供应链重组', '情报博弈', '科技突围'];
+        const focus = focuses[(gs.turn + (gs.runSeed % 5)) % focuses.length];
+        const intelBonus = gs.intelReports && gs.intelReports.length > 0;
+
+        const scene = {
+            title: `🎲 程序化战略局势（第${gs.turn}回合）`,
+            text: `${region}局势突变，当前焦点为「${focus}」。你需要在高压下做出非重复的战略组合。`,
+            choices: [
+                {
+                    text: '⚔️ 前沿部署，强势压迫对手',
+                    effect: (s) => {
+                        s.resources.militaryPower = Math.min(100, s.resources.militaryPower + 8);
+                        s.nuclearTension += 10;
+                        Object.keys(s.relations).forEach(k => { s.relations[k].threat += 6; });
+                        return '前沿部署完成，短期威慑提升，但周边国家紧张升级。\n\n(+8军事, +10核紧张, 各国威胁+6)';
+                    }
+                },
+                {
+                    text: '🕊️ 打包外交方案，换取缓和窗口',
+                    effect: (s) => {
+                        s.nuclearTension = Math.max(0, s.nuclearTension - 12);
+                        s.resources.reputation = Math.min(100, s.resources.reputation + 8);
+                        Object.keys(s.relations).forEach(k => { s.relations[k].trust = Math.min(100, s.relations[k].trust + 4); });
+                        return '多边外交取得突破，冲突暂缓。\n\n(-12核紧张, +8声誉, 各国信任+4)';
+                    }
+                },
+                {
+                    text: '📦 供应链再平衡，降低断供风险',
+                    effect: (s) => {
+                        const keys = Object.keys(s.supplyChain || {});
+                        keys.forEach(k => { s.supplyChain[k].disrupted = false; });
+                        s.resources.budget += 12;
+                        s.resources.stability += 6;
+                        return '完成供应链再平衡，物流恢复。\n\n(供应链恢复, +$12B, +6稳定)';
+                    }
+                },
+                {
+                    text: '🔬 战略科技突击，争夺规则制定权',
+                    effect: (s) => {
+                        s.resources.budget -= 18;
+                        s.resources.techLevel = Math.min(100, s.resources.techLevel + 12);
+                        s.nuclearTension += 4;
+                        return '关键技术突破，但引发外部警惕。\n\n(-$18B, +12科技, +4核紧张)';
+                    }
+                }
+            ]
+        };
+
+        if (intelBonus) {
+            const latest = gs.intelReports[gs.intelReports.length - 1];
+            scene.choices.push({
+                text: `🕵️ 利用线报定点博弈（${this.countryName(latest.target)}）`,
+                effect: (s) => {
+                    const target = latest.target;
+                    s.relations[target].trust = Math.max(0, s.relations[target].trust - 8);
+                    s.resources.budget += 10;
+                    s.resources.intelligence = Math.min(100, s.resources.intelligence + 6);
+                    return `你利用线报精准施压${this.countryName(target)}，获得实利。\n\n(${this.countryName(target)}信任-8, +$10B, +6情报)`;
+                }
+            });
+        }
+
+        return scene;
+    }
+
+    // 获取当前场景（支持 Roguelike 随机地图）
     getCurrentScene() {
-        // 根据游戏状态决定场景
         const turn = this.gameState.turn;
-        const act = this.gameState.currentAct;
-        
-        // 线性场景流 + 随机事件
+        const gs = this.gameState;
         if (turn === 1) return this.scenes.south_china_sea;
         if (turn === 2) return this.scenes.resource_discovery;
         if (turn === 3) return this.scenes.africa_proxy;
         if (turn === 4) return this.scenes.tech_race;
         if (turn === 5) return this.scenes.spy_network;
-        
-        // 中期随机事件 + 场景
+
         if (turn >= 6 && turn <= 10) {
-            if (Math.random() < 0.4) {
-                return this.scenes.crisis_escalation;
+            if (gs.worldMap && gs.worldMap.length > 0) {
+                const regionIndex = Math.min(gs.currentRegionIndex, gs.worldMap.length - 1);
+                const region = gs.worldMap[regionIndex];
+                const sceneKey = region.scenes && region.scenes.length
+                    ? this.pickSceneKey(region.scenes)
+                    : this.pickSceneKey(['resource_discovery', 'tech_race', 'spy_network']);
+                return this.scenes[sceneKey] || this.getRandomScene();
             }
+            if (Math.random() < 0.4) return this.scenes.crisis_escalation;
             return this.getRandomScene();
         }
-        
-        // 后期高潮
         if (turn >= 11 && turn <= 15) {
-            return this.scenes.crisis_escalation;
+            const key = this.pickSceneKey(['crisis_escalation', 'tech_race', 'spy_network', 'africa_proxy']);
+            return this.scenes[key];
         }
-        
-        // 最终抉择
-        if (turn >= 16) {
-            return this.scenes.final_choice;
-        }
-        
+        if (turn >= 16) return this.buildProceduralLateScene();
         return this.scenes.crisis_escalation;
     }
 
-    // 获取随机场景
     getRandomScene() {
         const scenes = [
             this.scenes.resource_discovery,
@@ -1049,6 +1283,13 @@ class GameEngine {
             this.scenes.spy_network
         ];
         return scenes[Math.floor(Math.random() * scenes.length)];
+    }
+
+    // 动态剧情文本（离线模板生成）
+    getDynamicSceneIntro(gs, scene) {
+        if (!gs.useDynamicStory || typeof RoguelikeData === 'undefined' || !scene) return null;
+        const seed = (gs.runSeed || 0) + gs.turn * 7;
+        return RoguelikeData.generateStoryBranch(seed, gs, 'crisis_intro', {});
     }
 
     // 做出选择
@@ -1089,25 +1330,32 @@ class GameEngine {
 
     // 触发随机事件
     triggerRandomEvent() {
+        const gs = this.gameState;
         const allEvents = [
             ...this.randomEvents.global,
             ...this.randomEvents.domestic,
             ...this.randomEvents.diplomatic
         ];
-        
-        // 筛选符合条件的事件
-        const availableEvents = allEvents.filter(e => 
-            e.minTurn <= this.gameState.turn &&
-            (!e.condition || e.condition(this.gameState)) &&
-            Math.random() < e.weight / 100
-        );
-        
-        if (availableEvents.length === 0) return;
-        
-        // 随机选择一个事件
-        const event = availableEvents[Math.floor(Math.random() * availableEvents.length)];
-        
-        // 显示事件
+        let event = null;
+        if (gs.eventChain && gs.eventChain.activeChainId && this.randomEvents.chainEvents) {
+            const nextId = gs.eventChain.nextEventId;
+            event = nextId ? allEvents.find(e => e.id === nextId) : null;
+            if (event) {
+                gs.eventChain.activeChainId = null;
+                gs.eventChain.nextEventId = null;
+            }
+        }
+        if (!event) {
+            const availableEvents = allEvents.filter(e =>
+                e.minTurn <= gs.turn && (!e.condition || e.condition(gs)) && Math.random() < (e.weight || 10) / 100
+            );
+            if (availableEvents.length === 0) return;
+            event = availableEvents[Math.floor(Math.random() * availableEvents.length)];
+            if (event.chainId && gs.eventChain) {
+                gs.eventChain.activeChainId = event.chainId;
+                gs.eventChain.nextEventId = event.nextEventId || null;
+            }
+        }
         this.showEvent(event);
     }
 
@@ -1143,51 +1391,131 @@ class GameEngine {
 
     // 下一回合
     nextTurn() {
-        this.gameState.turn++;
-        
-        // 更新幕
-        if (this.gameState.turn > 5 && this.gameState.turn <= 10) {
-            this.gameState.currentAct = 2;
-        } else if (this.gameState.turn > 10) {
-            this.gameState.currentAct = 3;
+        const gs = this.gameState;
+        gs.turn++;
+        gs.briefings = [];
+        if (gs.turn > 5 && gs.turn <= 10) {
+            gs.currentAct = 2;
+            if (gs.worldMap && gs.worldMap.length > 0) {
+                gs.currentRegionIndex = Math.min(gs.currentRegionIndex + 1, gs.worldMap.length - 1);
+            }
+        } else if (gs.turn > 10) {
+            gs.currentAct = 3;
         }
-        
-        // 自动调整
         this.applyTurnEffects();
-        
-        // 检查结局
         if (this.checkEnding()) return;
-        
-        // 保存
         this.saveGame();
-        
-        // 渲染
         this.render();
     }
 
     // 回合效果
     applyTurnEffects() {
-        // 预算消耗
-        this.gameState.resources.budget -= 5;
-        
-        // 稳定性自然恢复
-        if (this.gameState.resources.stability < 50) {
-            this.gameState.resources.stability += 2;
+        const gs = this.gameState;
+        let budgetCost = 5;
+        const perkBudget = gs.perksSelected && gs.perksSelected.find(p => p.effect === 'budgetCost');
+        if (perkBudget) budgetCost = Math.max(0, budgetCost - (perkBudget.value || 0));
+        gs.resources.budget -= budgetCost;
+
+        // 供应链：与供应国关系差则中断，造成额外损失
+        if (gs.supplyChain) {
+            Object.entries(gs.supplyChain).forEach(([key, chain]) => {
+                const supplier = chain.supplier;
+                const rel = gs.relations[supplier];
+                const disrupted = rel && (rel.favor < 25 || rel.trust < 20);
+                if (disrupted && !chain.disrupted) {
+                    chain.disrupted = true;
+                    chain.lastDisruptTurn = gs.turn;
+                } else if (rel && rel.favor >= 40 && rel.trust >= 35) {
+                    chain.disrupted = false;
+                }
+                if (chain.disrupted) {
+                    let penalty = 8;
+                    const resist = gs.perksSelected && gs.perksSelected.find(p => p.effect === 'supplyResist');
+                    if (resist) penalty *= (1 - resist.value);
+                    gs.resources.budget -= Math.round(penalty);
+                }
+            });
         }
-        
-        // 关系自然调整
-        Object.keys(this.gameState.relations).forEach(k => {
-            const rel = this.gameState.relations[k];
-            // 信任度缓慢恢复
+
+        // 军备竞赛：各国军备等级缓慢上升
+        if (gs.armsRace) {
+            Object.keys(gs.armsRace).forEach(k => {
+                if (gs.armsRace[k] < 95) gs.armsRace[k] = Math.min(100, gs.armsRace[k] + (k === 'China' ? 1.2 : k === 'USA' ? 1 : 0.8));
+            });
+        }
+
+        // 间谍任务结算
+        if (gs.spies && gs.spies.deployed && gs.spies.deployed.length) {
+            const toRemove = [];
+            gs.spies.deployed.forEach((m, i) => {
+                m.turnsLeft--;
+                if (m.turnsLeft <= 0) {
+                    const baseSuccess = 40 + gs.resources.intelligence * 0.4;
+                    const perkSpy = gs.perksSelected && gs.perksSelected.find(p => p.effect === 'spyBonus');
+                    const successRate = perkSpy ? baseSuccess + 10 : baseSuccess;
+                    const success = Math.random() * 100 < successRate;
+                    if (success) {
+                        if (m.mission === 'intel') {
+                            const intelKey = m.target.toLowerCase() + 'Intel';
+                            if (gs.secrets[intelKey]) gs.secrets[intelKey].push('deep_intel_' + m.target);
+                            gs.resources.intelligence = Math.min(100, gs.resources.intelligence + 10);
+                            gs.nuclearTension = Math.max(0, gs.nuclearTension - 2);
+                            gs.intelReports.push({ turn: gs.turn, mission: m.mission, target: m.target, text: `截获${this.countryName(m.target)}战略电报` });
+                            gs.briefings.push(`情报任务成功：${this.countryName(m.target)}线报到手（情报+10）`);
+                        } else if (m.mission === 'sabotage') {
+                            if (gs.armsRace && gs.armsRace[m.target] != null) gs.armsRace[m.target] = Math.max(0, gs.armsRace[m.target] - 8);
+                            gs.resources.budget += 8;
+                            gs.nuclearTension += 2;
+                            gs.intelReports.push({ turn: gs.turn, mission: m.mission, target: m.target, text: `${this.countryName(m.target)}军备节点受损` });
+                            gs.briefings.push(`破坏任务成功：${this.countryName(m.target)}军备受创（军备-8）`);
+                        } else {
+                            gs.relations[m.target].trust = Math.min(100, gs.relations[m.target].trust + 12);
+                            gs.relations[m.target].favor = Math.min(100, gs.relations[m.target].favor + 10);
+                            gs.relations[m.target].trade = Math.min(100, gs.relations[m.target].trade + 8);
+                            gs.resources.reputation = Math.min(100, gs.resources.reputation + 4);
+                            gs.intelReports.push({ turn: gs.turn, mission: m.mission, target: m.target, text: `秘密渠道影响${this.countryName(m.target)}决策层` });
+                            gs.briefings.push(`渗透任务成功：${this.countryName(m.target)}关系改善（信任+12）`);
+                        }
+                    } else {
+                        gs.relations[m.target].trust -= 15;
+                        gs.relations[m.target].favor -= 10;
+                        const reduce = gs.perksSelected && gs.perksSelected.find(p => p.effect === 'spyExposeReduce');
+                        if (reduce) {
+                            gs.relations[m.target].trust += 7;
+                            gs.relations[m.target].favor += 5;
+                        }
+                        gs.briefings.push(`间谍任务失败：${this.countryName(m.target)}启动反制（关系受损）`);
+                    }
+
+                    // 任务结束后，间谍有机会归队（解决“越用越少”的问题）
+                    const returns = success || Math.random() < 0.55;
+                    if (returns) {
+                        gs.spies.available += 1;
+                    } else {
+                        gs.briefings.push('一名特工失联，暂无法恢复编制');
+                    }
+                    toRemove.push(i);
+                }
+            });
+            toRemove.reverse().forEach(i => gs.spies.deployed.splice(i, 1));
+        }
+
+        if (gs.resources.stability < 50) gs.resources.stability += 2;
+        const anchor = gs.perksSelected && gs.perksSelected.find(p => p.effect === 'stabilityAnchor');
+        if (anchor && gs.resources.stability < 50) gs.resources.stability += 1;
+
+        Object.keys(gs.relations).forEach(k => {
+            const rel = gs.relations[k];
             if (rel.trust < 50) rel.trust += 1;
-            // 威胁感知缓慢下降
+            const diplomat = gs.perksSelected && gs.perksSelected.find(p => p.effect === 'relationRecovery');
+            if (diplomat) rel.trust = Math.min(100, rel.trust + 1);
             if (rel.threat > 20) rel.threat -= 1;
         });
-        
-        // 核紧张度缓慢下降
-        if (this.gameState.nuclearTension > 20) {
-            this.gameState.nuclearTension -= 1;
-        }
+
+        let tensionDrop = 1;
+        const cool = gs.perksSelected && gs.perksSelected.find(p => p.effect === 'tensionCool');
+        if (cool) tensionDrop += cool.value || 1;
+        if (gs.nuclearTension > 20) gs.nuclearTension = Math.max(0, gs.nuclearTension - tensionDrop);
     }
 
     // 检查结局
@@ -1331,18 +1659,35 @@ class GameEngine {
         localStorage.setItem(this.saveKey, JSON.stringify(this.gameState));
     }
 
-    // 加载游戏
+    // 加载游戏（兼容旧存档）
     loadGame() {
-        const saved = localStorage.getItem(this.saveKey);
-        if (saved) {
-            try {
-                this.gameState = JSON.parse(saved);
-                return true;
-            } catch (e) {
-                return false;
+        let saved = localStorage.getItem(this.saveKey);
+        if (!saved) saved = localStorage.getItem('chiqiongProtocolV2Save');
+        if (!saved) return false;
+        try {
+            const parsed = JSON.parse(saved);
+            if (!parsed.runSeed) parsed.runSeed = Date.now();
+            if (!parsed.supplyChain) {
+                parsed.supplyChain = { oil: { supplier: 'USA', disrupted: false, lastDisruptTurn: 0 }, rare_earth: { supplier: 'China', disrupted: false, lastDisruptTurn: 0 }, cobalt: { supplier: 'China', disrupted: false, lastDisruptTurn: 0 }, grain: { supplier: 'EU', disrupted: false, lastDisruptTurn: 0 }, chips: { supplier: 'USA', disrupted: false, lastDisruptTurn: 0 } };
             }
+            if (!parsed.armsRace) parsed.armsRace = { USA: 30, China: 25, Russia: 28, EU: 20, India: 18 };
+            if (!parsed.worldMap || parsed.worldMap.length === 0) {
+                parsed.worldMap = typeof RoguelikeData !== 'undefined' ? RoguelikeData.generateWorldMap(parsed.runSeed, 6) : [];
+            }
+            if (!parsed.perksOffered || parsed.perksOffered.length === 0) {
+                parsed.perksOffered = typeof RoguelikeData !== 'undefined' ? RoguelikeData.drawPerks(parsed.runSeed, 6) : [];
+            }
+            if (!parsed.perksSelected) parsed.perksSelected = [];
+            if (!parsed.eventChain) parsed.eventChain = { activeChainId: null, stepIndex: 0 };
+            if (parsed.useDynamicStory === undefined) parsed.useDynamicStory = true;
+            if (!parsed.intelReports) parsed.intelReports = [];
+            if (!parsed.briefings) parsed.briefings = [];
+            if (!parsed.sceneHistory) parsed.sceneHistory = [];
+            this.gameState = parsed;
+            return true;
+        } catch (e) {
+            return false;
         }
-        return false;
     }
 
     // 新游戏
