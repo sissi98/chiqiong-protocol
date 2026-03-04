@@ -1,0 +1,20 @@
+{
+  "nuclear_tension": 30,
+  "relations": {
+    "USA": 50,
+    "China": 50,
+    "Russia": 125,
+    "EU": 50,
+    "India": 50
+  },
+  "resources": {
+    "budget": 55,
+    "tech_level": 30
+  },
+  "flags": {
+    "first_contact_russia": true,
+    "africa_proxy_active": false,
+    "discovered_secret_weapon": false
+  },
+  "current_chapter": 2
+}
